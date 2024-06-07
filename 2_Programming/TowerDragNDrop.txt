@@ -1,0 +1,162 @@
+using UnityEngine;
+using DG.Tweening;
+
+public class TowerDragNDrop : MonoBehaviour
+{
+    [SerializeField] private GameObject towerPositionManager;
+    private Vector3 _mousePosition, _resetPosition, _previousPosition;
+    private bool _hasBeenMovedAtLeastOnce, _isDragFinished;
+    private Transform _correctPosition;
+    private Camera _camera;
+
+    void Start()
+    {
+        _resetPosition = this.transform.position;
+        _camera = Camera.main;
+    }
+    
+    private Vector3 GetMousePos()
+    {
+        return _camera.WorldToScreenPoint(transform.position);
+    }
+
+    private void OnMouseDown()
+    {
+        _isDragFinished = false;
+        gameObject.GetComponent<TowerLogic>().isActive = false;
+        _mousePosition = Input.mousePosition - GetMousePos();
+    }
+
+    private void OnMouseDrag()
+    {
+        if (!_isDragFinished)
+        {
+            transform.position = _camera.ScreenToWorldPoint(Input.mousePosition - _mousePosition);
+            gameObject.GetComponent<TowerLogic>().isActive = false;
+        }
+    }
+
+    private void OnMouseUp()
+    {
+        Vector3 nearestFieldPosition = IsNearFieldPosition(this.transform.position);
+        
+        TowerPositionManager.FieldState nearestFieldStatus = IsValidPosition(nearestFieldPosition);
+        
+        bool isTooCloseToAnotherTower = IsTooCloseToOtherTower(nearestFieldPosition);
+        
+        switch (nearestFieldStatus)
+        {
+            case TowerPositionManager.FieldState.Empty:
+                
+                if (isTooCloseToAnotherTower)
+                {
+                    if (!_hasBeenMovedAtLeastOnce)
+                    {
+                        gameObject.transform.DOMove(_resetPosition, .5f).SetEase(Ease.InOutSine);
+                    }
+                    else
+                    {
+                        gameObject.transform.DOMove(_previousPosition, .5f).SetEase(Ease.InOutSine);
+                    }
+                }
+                else
+                {
+                    this.transform.DOMove(nearestFieldPosition, .5f).SetEase(Ease.InOutSine);
+                    gameObject.GetComponent<TowerLogic>().isActive = true;
+                    _previousPosition = this.transform.position;
+                    _hasBeenMovedAtLeastOnce = true;
+                }
+                break;
+            case TowerPositionManager.FieldState.Occupied:
+                
+                if (!_hasBeenMovedAtLeastOnce)
+                {
+                    gameObject.transform.DOMove(_resetPosition, .5f).SetEase(Ease.InOutSine);
+                }
+                else
+                {
+                    gameObject.transform.DOMove(_previousPosition, .5f).SetEase(Ease.InOutSine);
+                }
+                break;
+            case TowerPositionManager.FieldState.Blocked:
+
+                if (!_hasBeenMovedAtLeastOnce)
+                {
+                    gameObject.transform.DOMove(_resetPosition, .5f).SetEase(Ease.InOutSine);
+                }
+                else
+                {
+                    gameObject.transform.DOMove(_previousPosition, .5f).SetEase(Ease.InOutSine);
+                }   
+                break;
+        }
+        _isDragFinished = true;
+    }
+
+    private Vector3 IsNearFieldPosition(Vector3 pos)
+    {
+        float minDistance = Mathf.Infinity;
+        Vector3 nearestFieldPosition = Vector3.zero;
+        
+        TowerPositionManager positionManager = towerPositionManager.GetComponent<TowerPositionManager>();
+        
+        for (int i = 0; i < positionManager.PositionTransform.GetLength(0); i++)
+        {
+            for (int j = 0; j < positionManager.PositionTransform.GetLength(1); j++)
+            {
+                Vector3 worldPosition = positionManager.PositionTransform[i, j].position;
+                
+                float distance = Vector3.Distance(pos, worldPosition);
+                
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    nearestFieldPosition = worldPosition;
+                }
+            }
+        }
+        return nearestFieldPosition;
+    }
+
+    private TowerPositionManager.FieldState IsValidPosition(Vector3 pos)
+    {
+        float minDistance = Mathf.Infinity;
+        TowerPositionManager.FieldState nearestFieldStatus = TowerPositionManager.FieldState.Blocked;
+        
+        TowerPositionManager positionManager = towerPositionManager.GetComponent<TowerPositionManager>();
+        
+        for (int i = 0; i < positionManager.PositionTransform.GetLength(0); i++)
+        {
+            for (int j = 0; j < positionManager.PositionTransform.GetLength(1); j++)
+            {
+                Vector3 worldPosition = positionManager.PositionTransform[i, j].position;
+                
+                float distance = Vector3.Distance(pos, worldPosition);
+                
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    nearestFieldStatus = positionManager.PositionStatus[i, j];
+                }
+            }
+        }
+        
+        return nearestFieldStatus;
+    }
+    private bool IsTooCloseToOtherTower(Vector3 pos)
+    {
+        float radius = .07f;
+
+        Collider2D[] colliders = Physics2D.OverlapCircleAll(pos, radius);
+
+        foreach (Collider2D collider in colliders )
+        {
+            if (collider.gameObject.CompareTag("Player") && collider.gameObject != gameObject)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+}

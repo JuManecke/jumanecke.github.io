@@ -1,0 +1,256 @@
+Shader "FullScreen/TimeRewindCFSP"
+{
+    Properties
+    {
+        _Color1("Color1", Color) = (1,1,1,1)
+        _Color2("Color2", Color) = (2,2,2,2)
+        _Color3("Color3", Color) = (3,3,3,3)
+        _Color4("Color4", Color) = (4,4,4,4)
+    	_Color5("Color5", Color) = (5,5,5,5)
+    	_Color6("Color6", Color) = (6,6,6,6)
+        
+    	_HueShift   ("Hue Shift" , Range(   0, 10.00)) = 0
+    	_Saturation ("Saturation", Range(   0,  5.00)) = 1
+    	_Brightness ("Brightness", Range(  -1,  1.00)) = 0
+    	_TimeFactor ("TimeFactor", Range(0.01,  5.99)) = 0.01	// timecount for the animation
+    	
+    	_NoiseTexture ("Noise Texture", 2D) = "white" {}	// Texture to give the shader more roughness
+    														// The Texture used is a unity default texture
+        
+        _Period    ("Period",    Range(0, 200.0)) = 180.0	// Time for the animation to play
+		_Magnitude ("Magnitude", Range(0,   0.9)) =   0.8	// Magnitude of the distortion
+		_Scale     ("Scale",     Range(0,  20.0)) =  18.0	// Scale of the distortion
+    }
+    
+    HLSLINCLUDE
+
+    #pragma vertex Vert
+
+    #pragma target 4.5
+    #pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal switch
+
+    #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/RenderPass/CustomPass/CustomPassCommon.hlsl"
+
+    // Initialize values:
+    // Colors
+    float4 _Color1;
+    float4 _Color2;
+    float4 _Color3;
+    float4 _Color4;
+    float4 _Color5;
+    float4 _Color6;
+
+    // Colorshifts
+    float _HueShift;
+    float _Saturation;
+    float _Brightness;
+
+    // Timevariable for the animation
+    float _TimeFactor;
+
+    // Texture
+    sampler2D _NoiseTexture;
+
+    // Distortion
+    float _Period;
+	float _Magnitude;
+	float _Scale;
+
+    //Shifting around Colors by Hue, Saturation and Brightness
+    float3 HueShift(float3 color, float hueShift)
+	{
+		float3x3 RGBtoABC = float3x3 ( 0.299,     0.587,     0.114,
+									   0.595716, -0.274453, -0.321263,
+									   0.211456, -0.522591,  0.311135);
+    	float3x3 ABCtoRGB = float3x3(  1,         0.9563,    0.6210,
+									   1,        -0.2721,   -0.6474,
+									   1,        -1.1070,    1.7046);
+    	
+    	float3 ColorSaver = mul(RGBtoABC, color);
+    	
+    	float hue    = atan2  (         ColorSaver.z, ColorSaver.y) + hueShift;
+    	float chroma = length ( float2( ColorSaver.y, ColorSaver.z) * _Saturation);
+
+    	float A = ColorSaver.x + _Brightness;
+    	float B = chroma       * cos(hue);
+    	float C = chroma       * sin(hue);
+
+    	float3 shiftColor = float3 (A, B, C);
+    	float3 newRGB     = mul(ABCtoRGB, shiftColor);
+    	return newRGB;
+	}
+
+    float4 FullScreenPass(Varyings varyings) : SV_Target
+    {
+        UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(varyings);
+    	
+        float sinT  = sin(_Time.w / _Period);
+    	// Time gets calculated by the period and the sin function
+    	
+        float depth = LoadCameraDepth(varyings.positionCS.xy);
+		// getting the depth from the camera
+    	
+        PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ScreenSize.zw, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
+    	// getting screen size from _ScreenSize and depth from LoadCameraDepth to get the position on the screen
+		
+        float2 center = float2(0.5, 0.5);
+    	// starting from the center of the screen by subtracting 0.5 from the positions
+    	
+        float distanceToCenter = length(posInput.positionNDC - center);
+    	// calculating the distance from the center of the screen with the normalized device coordinates
+    	
+        float transitionWidth = 0.4;
+    	// Adjust this value to control the width of the transition
+    	
+    	float transparency1 = saturate(1 - smoothstep(transitionWidth, 1, distanceToCenter))*1;
+    	float transparency2 = saturate(1 - smoothstep(transitionWidth, 1, distanceToCenter ))*2;
+    	float transparency3 = saturate(1 - smoothstep(transitionWidth, 1, distanceToCenter + .4f))*3;
+    	float transparency4 = saturate(1 - smoothstep(transitionWidth, 1, distanceToCenter +1.4f))*4;
+    	float transparency5 = saturate(1 - smoothstep(transitionWidth, 1, distanceToCenter + .6f))*5;
+    	float transparency6 = saturate(1 - smoothstep(transitionWidth, 1, distanceToCenter + 1.5f))*6;
+    	float transparency7 = saturate(1 - smoothstep(transitionWidth, 1, distanceToCenter + 1.0f))*7;
+    	// calculating the transparency of the transition, each color needs a different
+    	// transparency value to create a similar and smooth transition
+    		// saturate is used to clamp the value between 0 and 1
+    			// smoothstep´s interpolation needs a smaller first value a and a bigger second
+    			// value b, with the third value beeing the source of the interpolation 
+    			// smoothstep is used to create a smooth transition between the two values,
+    			// while the interpolation will gradually speed from the start and slow down
+    			// towards the end useful for creating a smooth transition between two values
+    			// for natural looking animations
+    	
+    	float f = 1 - abs(_FadeValue * 2 - 1);
+		// Fade value allows you to increase the strength of the effect while the shadercolors get closer to the center
+    	
+        float4 color1 = _Color1;
+		color1.a -= transparency1;
+
+		float4 color2 = _Color2;
+    	color2.a -= transparency2;
+
+		float4 color3 = _Color3;
+    	color3.a -= transparency3;
+
+		float4 color4 = _Color4;
+    	color4.a -= transparency4;
+    	
+    	float4 color5 = _Color5;
+    	color5.a -= transparency5;
+
+    	float4 color6 = _Color6;
+    	color6.a -= transparency6;
+
+    	float4 color7 = _Color6;
+    	color7.a -= transparency7;
+    	// initialising the colors and the transparency for each color
+    	
+    	float _Intensity1 = smoothstep(0  , 0.8,_TimeFactor);
+    	float _Intensity2 = smoothstep(1  , 2  ,_TimeFactor);
+    	float _Intensity3 = smoothstep(2  , 3  ,_TimeFactor);
+    	float _Intensity4 = smoothstep(3.2, 4  ,_TimeFactor);
+    	float _Intensity5 = smoothstep(4.2, 5  ,_TimeFactor);
+    	float _Intensity6 = smoothstep(5  , 5.7,_TimeFactor);
+    	float _Intensity7 = smoothstep(5.7, 6  ,_TimeFactor);
+    	// calculating the intensity for each color according to the timevariable
+    	// so its possible to change the single sections with their intensity here
+
+    	float4 colorT1;
+    	float4 colorT2;
+    	float4 colorT3;
+    	float4 colorT4;
+    	float4 colorT5;
+    	float4 colorT6;
+    	float4 colorT7;
+    	float4 finalColor;
+    	// initializing the colors for the final return
+        
+    	if (_TimeFactor > 6)
+		{
+		    _TimeFactor = 5.99;
+    		// Reset _TimeFactor to create a continuous loop
+		}
+    	else if (_TimeFactor >= 5.5)	// all Values are between 5 to 6 so the color 6 and 7 are mixed
+		{
+		    colorT7 = lerp(color6, color7, _Intensity7);
+		    finalColor = colorT7;
+		}
+    	else if (_TimeFactor >= 5)	// all Values are between 5 to 6 so the color 5 and 6 are mixed
+		{
+		    colorT6 = lerp(color5, color6, _Intensity6);
+		    finalColor = colorT6;
+		}
+    	else if (_TimeFactor >= 4)	// all Values are between 4 to 5 so the color 4 and 5 are mixed
+		{
+		    colorT5 = lerp(color4, color5, _Intensity5);
+		    finalColor = colorT5;
+		}
+    	else if (_TimeFactor >= 3) // all Values are between 3 to 4 so the color 3 and 4 are mixed
+		{
+		    colorT4 = lerp(color3, color4, _Intensity4);
+		    finalColor = colorT4;
+		}
+		else if (_TimeFactor >= 2) // all Values are between 2 to 3 so the color 2 and 3 are mixed
+		{
+		    colorT3 = lerp(color2, color3, _Intensity3);
+		    finalColor = colorT3;
+		}
+		else if (_TimeFactor >= 1) // all Values are between 1 to 2 so the color 1 and 2 are mixed
+		{
+		    colorT2 = lerp(color1, color2, _Intensity2);
+		    finalColor = colorT2;
+		}
+		else if (_TimeFactor >= 0) // all Values are between 0 to 1 so a fade to color 1 starts
+		{
+		    colorT1 = lerp(float4(1,1,1,0), color1, _Intensity1);
+		    finalColor = colorT1;
+		}
+    	else if (_TimeFactor <= 0)
+    	{
+		    _TimeFactor = 0.01;
+    		// Reset _TimeFactor to create a continuous loop
+		}
+    	
+    	float4 colormix = float4(finalColor.rgb + f, finalColor.a);
+		// mixing the final color with the fade value to create a smooth transition
+
+		float2 distortion = float2
+		(
+			tex2D(_NoiseTexture, center / _Scale + float2(sinT, 0) ).r - .5,
+			tex2D(_NoiseTexture, center / _Scale + float2(0, sinT) ).r - .5
+		);
+    	// getting the distortion from the noise texture
+		
+		float4 col = colormix * distortion.x + colormix * distortion.y;
+    	// mixing the distortion with the color to create a distortion effect
+    	
+		float4 endresult = col * colormix;
+		// keep mixing for a better result
+    	
+		endresult.rgb = HueShift(endresult.rgb, _HueShift);
+		// shifting the colors around by hue, saturation
+    	
+        return endresult;
+    	// finally returning the color
+    }
+
+    ENDHLSL
+
+    SubShader
+    {
+        Tags{ "RenderPipeline" = "HDRenderPipeline" }
+        Pass
+        {
+            Name "Custom Pass 0"
+
+            ZWrite Off
+            ZTest Always
+            Blend SrcAlpha OneMinusSrcAlpha
+            Cull Off
+
+            HLSLPROGRAM
+                #pragma fragment FullScreenPass
+            ENDHLSL
+        }
+    }
+    Fallback Off
+}

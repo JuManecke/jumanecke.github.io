@@ -1,0 +1,108 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using DG.Tweening;
+using UnityEngine.Serialization;
+using Random = UnityEngine.Random;
+
+public class Pipes : MonoBehaviour
+{
+    float [] rotations = {0, 90, 180, 270};
+    
+    public float correctRotation;
+    public float correctRotation2;
+    public bool is4Armed = false;
+    [SerializeField] public bool isPlacedCorrectly = false;
+    [SerializeField] private GameObject PipeStateManager;
+    
+    private float DelayTillMovableAgain = 0.25f;
+    private bool isMovable = true;
+    
+    private void Start()
+    {
+        int randomRotation = Random.Range(0, rotations.Length);
+        if (!is4Armed)
+        {
+            for (int i = 0; i < rotations.Length; i++)
+            {
+                if (rotations[randomRotation] == correctRotation || rotations[randomRotation] == correctRotation2)
+                {
+                    randomRotation = Random.Range(0, rotations.Length);
+                }
+            }
+        }
+        transform.DORotate(new Vector3(0, 0, rotations[randomRotation]), 0.1f);
+        Invoke("CorrectCheck", .21f);
+    }
+
+    private void Update()
+    {
+        if (Input.GetMouseButton(0) || Input.GetMouseButtonDown(1))
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+            if (Physics.Raycast(ray, out hit))
+            {
+                if (Vector3.Distance(gameObject.transform.position, hit.transform.position) < .02f)
+                {
+                    if (isMovable)
+                    {
+                        if (Input.GetMouseButton(0))
+                        {
+                            if (transform.eulerAngles.z < 270)
+                            {
+                                transform.DORotate(new Vector3(0, 0, transform.eulerAngles.z + 90), 0.2f);
+                            }
+                            else if (transform.eulerAngles.z == 270)
+                            {
+                                transform.DORotate(new Vector3(0, 0, 0), 0.2f);
+                            }
+                            Invoke("CorrectCheck", 0.21f);
+                        }
+                        
+                        if (Input.GetMouseButton(1))
+                        {
+                            if (transform.eulerAngles.z > 0)
+                            {
+                                transform.DORotate(new Vector3(0, 0, transform.eulerAngles.z - 90), 0.2f);
+                            }
+                            else if (transform.eulerAngles.z == 0)
+                            {
+                                transform.DORotate(new Vector3(0, 0, 270), 0.2f);
+                            }
+                            Invoke("CorrectCheck", 0.21f);
+                        }
+
+                        isMovable = false;
+                        Invoke("MovableAgain", DelayTillMovableAgain);
+                    }
+                }
+            }
+        }
+    }
+
+    private void MovableAgain()
+    {
+        isMovable = true;
+    }
+
+    private void CorrectCheck()
+    {
+        float snappedangle = Snapping.Snap(transform.eulerAngles.z % 360f, 10f);
+        
+        if (Mathf.Approximately(snappedangle, correctRotation) || Mathf.Approximately(snappedangle, correctRotation2))
+        {
+            isPlacedCorrectly = true;
+        }
+        else
+        {
+            if (is4Armed)
+            {
+                isPlacedCorrectly = true;
+            }
+            else isPlacedCorrectly = false;
+        }
+        PipeStateManager.GetComponent<PipeStateManager>().FinishedCheckerPipes();
+    }
+}

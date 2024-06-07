@@ -1,0 +1,147 @@
+
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class DoorRegister : MonoBehaviour
+{
+    // This script is used to spawn the player at the correct position when entering a new room
+    // It is attached to the DoorRegister GameObject in the Room
+    // First of all - it needs an input of all the doors in the scene
+    [Header("Player")]
+    [SerializeField] private GameObject Player;
+    [Header("Doors on the Left")]
+    [SerializeField] private GameObject LeftD1;
+    [SerializeField] private GameObject LeftD2;
+    [SerializeField] private GameObject LeftD3;
+    [SerializeField] private GameObject LeftD4;
+    private int LeftDoorCounter = 0;                // counts the amount of doors on the left side
+    private int LeftDoorChosenToSpawnFrom;          // chooses a random door on the left side to spawn from
+    
+    [Header("Doors on the Right")]
+    [SerializeField] private GameObject RightD1;
+    [SerializeField] private GameObject RightD2;
+    [SerializeField] private GameObject RightD3;
+    [SerializeField] private GameObject RightD4;
+    private int RightDoorCounter = 0;
+    private int RightDoorChosenToSpawnFrom;
+    
+    [Header("Doors on the Top")]
+    [SerializeField] private GameObject TopD1;
+    [SerializeField] private GameObject TopD2;
+    [SerializeField] private GameObject TopD3;
+    [SerializeField] private GameObject TopD4;
+    private int TopDoorCounter = 0;
+    private int TopDoorChosenToSpawnFrom;
+    
+    [Header("Doors on the Bottom")]
+    [SerializeField] private GameObject BotD1;
+    [SerializeField] private GameObject BotD2;
+    [SerializeField] private GameObject BotD3;
+    [SerializeField] private GameObject BotD4;
+    private int BotDoorCounter = 0;
+    private int BotDoorChosenToSpawnFrom;
+    
+    private Transform PlayerTransform;              // used to get the position of the player
+    private float RightDoorSpawnX;                  // used to save the X position of the door where the player should spawn
+    private float RightDoorSpawnZ;                  // used to save the Z position of the door where the player should spawn
+    private float LeftDoorSpawnX;
+    private float LeftDoorSpawnZ;
+    private float TopDoorSpawnX;
+    private float TopDoorSpawnZ;
+    private float BotDoorSpawnX;
+    private float BotDoorSpawnZ;
+    
+    private void Awake()
+    {
+        Debug.Log("current scene: "+ AlwaysThere.currentScene);
+        PlayerTransform = Player.GetComponent<Transform>();
+        // use the default Playerposition as the spawnposition if there should be a spawn on a side where no door is
+        if (   !AlwaysThere.generalRightDoorSpawn && !AlwaysThere.generalLeftDoorSpawn 
+            && !AlwaysThere.generalTopDoorSpawn   && !AlwaysThere.generalBotDoorSpawn)
+        {
+            Player.transform.position = PlayerTransform.transform.position; 
+            ResetOfDoorSpawn(); 
+            Debug.Log("No door to spawn from");
+            return;
+        }
+        if (RightD1 == null && RightD2 == null && RightD3 == null && RightD4 == null && AlwaysThere.generalRightDoorSpawn == true) { Player.transform.position = PlayerTransform.transform.position; ResetOfDoorSpawn();  return;}
+        if (LeftD1  == null && LeftD2  == null && LeftD3  == null && LeftD4  == null && AlwaysThere.generalLeftDoorSpawn  == true) { Player.transform.position = PlayerTransform.transform.position; ResetOfDoorSpawn();  return;}
+        if (TopD1   == null && TopD2   == null && TopD3   == null && TopD4   == null && AlwaysThere.generalTopDoorSpawn   == true) { Player.transform.position = PlayerTransform.transform.position; ResetOfDoorSpawn();  return;}
+        if (BotD1   == null && BotD2   == null && BotD3   == null && BotD4   == null && AlwaysThere.generalBotDoorSpawn   == true) { Player.transform.position = PlayerTransform.transform.position; ResetOfDoorSpawn();  return;}
+
+        // figure out how many doors are on each side
+        if (RightD1 != null) { RightDoorCounter++; }
+        if (RightD2 != null) { RightDoorCounter++; }
+        if (RightD3 != null) { RightDoorCounter++; }
+        if (RightD4 != null) { RightDoorCounter++; }
+        if (LeftD1  != null) { LeftDoorCounter++;  }
+        if (LeftD2  != null) { LeftDoorCounter++;  }
+        if (LeftD3  != null) { LeftDoorCounter++;  }
+        if (LeftD4  != null) { LeftDoorCounter++;  }
+        if (TopD1   != null) { TopDoorCounter++;   }
+        if (TopD2   != null) { TopDoorCounter++;   }
+        if (TopD3   != null) { TopDoorCounter++;   }
+        if (TopD4   != null) { TopDoorCounter++;   }
+        if (BotD1   != null) { BotDoorCounter++;   }
+        if (BotD2   != null) { BotDoorCounter++;   }
+        if (BotD3   != null) { BotDoorCounter++;   }
+        if (BotD4   != null) { BotDoorCounter++;   }
+
+        // choose a random door on each side to spawn from
+        if (AlwaysThere.generalRightDoorSpawn)
+        {
+            RightDoorChosenToSpawnFrom = Random.Range(0, RightDoorCounter);
+            if (RightDoorChosenToSpawnFrom == 0) { RightDoorSpawnX = RightD1.transform.position.x; RightDoorSpawnZ = RightD1.transform.position.z; }
+            if (RightDoorChosenToSpawnFrom == 1) { RightDoorSpawnX = RightD2.transform.position.x; RightDoorSpawnZ = RightD2.transform.position.z; }
+            if (RightDoorChosenToSpawnFrom == 2) { RightDoorSpawnX = RightD3.transform.position.x; RightDoorSpawnZ = RightD3.transform.position.z; }
+            if (RightDoorChosenToSpawnFrom == 3) { RightDoorSpawnX = RightD4.transform.position.x; RightDoorSpawnZ = RightD4.transform.position.z; }
+            if (RightDoorChosenToSpawnFrom >= 4 || RightDoorChosenToSpawnFrom < 0) { Debug.LogError("RightDoorChosenToSpawnFrom is out of range"); }
+        }
+        if (AlwaysThere.generalLeftDoorSpawn)
+        {
+            LeftDoorChosenToSpawnFrom = Random.Range(0, LeftDoorCounter);
+            if (LeftDoorChosenToSpawnFrom == 0) { LeftDoorSpawnX = LeftD1.transform.position.x; LeftDoorSpawnZ = LeftD1.transform.position.z; }
+            if (LeftDoorChosenToSpawnFrom == 1) { LeftDoorSpawnX = LeftD2.transform.position.x; LeftDoorSpawnZ = LeftD2.transform.position.z; }
+            if (LeftDoorChosenToSpawnFrom == 2) { LeftDoorSpawnX = LeftD3.transform.position.x; LeftDoorSpawnZ = LeftD3.transform.position.z; }
+            if (LeftDoorChosenToSpawnFrom == 3) { LeftDoorSpawnX = LeftD4.transform.position.x; LeftDoorSpawnZ = LeftD4.transform.position.z; }
+            if (LeftDoorChosenToSpawnFrom >= 4 || LeftDoorChosenToSpawnFrom < 0) { Debug.LogError("LeftDoorChosenToSpawnFrom is out of range"); }
+        }
+        if (AlwaysThere.generalTopDoorSpawn)
+        {
+            TopDoorChosenToSpawnFrom = Random.Range(0, TopDoorCounter);
+            if (TopDoorChosenToSpawnFrom == 0) { TopDoorSpawnX = TopD1.transform.position.x; TopDoorSpawnZ = TopD1.transform.position.z; }
+            if (TopDoorChosenToSpawnFrom == 1) { TopDoorSpawnX = TopD2.transform.position.x; TopDoorSpawnZ = TopD2.transform.position.z; }
+            if (TopDoorChosenToSpawnFrom == 2) { TopDoorSpawnX = TopD3.transform.position.x; TopDoorSpawnZ = TopD3.transform.position.z; }
+            if (TopDoorChosenToSpawnFrom == 3) { TopDoorSpawnX = TopD4.transform.position.x; TopDoorSpawnZ = TopD4.transform.position.z; }
+            if (TopDoorChosenToSpawnFrom >= 4 || TopDoorChosenToSpawnFrom < 0) { Debug.LogError("TopDoorChosenToSpawnFrom is out of range"); }
+        }
+        if (AlwaysThere.generalBotDoorSpawn)
+        {
+            BotDoorChosenToSpawnFrom = Random.Range(0, BotDoorCounter);
+            if (BotDoorChosenToSpawnFrom == 0) { BotDoorSpawnX = BotD1.transform.position.x; BotDoorSpawnZ = BotD1.transform.position.z; }
+            if (BotDoorChosenToSpawnFrom == 1) { BotDoorSpawnX = BotD2.transform.position.x; BotDoorSpawnZ = BotD2.transform.position.z; }
+            if (BotDoorChosenToSpawnFrom == 2) { BotDoorSpawnX = BotD3.transform.position.x; BotDoorSpawnZ = BotD3.transform.position.z; }
+            if (BotDoorChosenToSpawnFrom == 3) { BotDoorSpawnX = BotD4.transform.position.x; BotDoorSpawnZ = BotD4.transform.position.z; }
+            if (BotDoorChosenToSpawnFrom >= 4 || BotDoorChosenToSpawnFrom < 0) { Debug.LogError("BotDoorChosenToSpawnFrom is out of range"); }
+        }
+
+        // Spawning the player at the correct random Position according to the doorDirection
+        if (AlwaysThere.generalRightDoorSpawn) { Player.transform.position = new Vector3(RightDoorSpawnX - 2.5f, PlayerTransform.transform.position.y, RightDoorSpawnZ);}
+        if (AlwaysThere.generalLeftDoorSpawn)  { Player.transform.position = new Vector3(LeftDoorSpawnX + 2.5f, PlayerTransform.transform.position.y, LeftDoorSpawnZ);}
+        if (AlwaysThere.generalTopDoorSpawn)   { Player.transform.position = new Vector3(TopDoorSpawnX, PlayerTransform.transform.position.y, TopDoorSpawnZ - 2.5f);}
+        if (AlwaysThere.generalBotDoorSpawn)   { Player.transform.position = new Vector3(BotDoorSpawnX, PlayerTransform.transform.position.y, BotDoorSpawnZ + 2.5f);}
+
+        // Reset the bools
+        ResetOfDoorSpawn();
+        return;
+    }
+
+    private void ResetOfDoorSpawn()
+    {
+        // Reset the bools
+        AlwaysThere.generalRightDoorSpawn = false;
+        AlwaysThere.generalLeftDoorSpawn  = false;
+        AlwaysThere.generalTopDoorSpawn   = false;
+        AlwaysThere.generalBotDoorSpawn   = false;
+    }
+}

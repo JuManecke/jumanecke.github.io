@@ -1,0 +1,135 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using DG.Tweening;
+using UnityEngine.Serialization;
+
+public class CircuitMovement : MonoBehaviour
+{
+    [SerializeField] private GameObject CircuitStateManager;
+    [SerializeField] private GameObject correctLamp1, correctLamp2, correctLamp3, correctLamp4, outsideLamp;
+    [SerializeField] private GameObject lightSource;
+    [SerializeField] [Range(1, 4)] private int  whichLampIsCorrect= 1;
+    [SerializeField] private int lumenValueStart, lumenValue1, lumenValue2, lumenValue3, lumenValue4;
+    [SerializeField] private AudioClip[] _DropSound;
+    private Vector3 mousePos, resetPos, previousPos;
+    public bool correctPosition, hasBeenMovedBefore, isDragFinished, is15LLamp = false;
+
+    void Start()
+    {
+        resetPos = this.transform.position;
+        lumenValueStart = (int)lightSource.GetComponent<Light>().intensity;
+    }
+    
+    private Vector3 GetMousePos()
+    {
+        return Camera.main.WorldToScreenPoint(transform.position);
+    }
+
+    private void OnMouseDown()
+    {
+        isDragFinished = false;
+        mousePos = Input.mousePosition - GetMousePos();
+    }
+    private void OnMouseDrag()
+    {
+        if (!isDragFinished)
+        {
+            transform.position = Camera.main.ScreenToWorldPoint(Input.mousePosition - mousePos);
+        }
+    }
+    private void OnMouseUp()
+    {
+        InteractionManager.PlaySoundRandomSFX(_DropSound, .5f, 1.5f);
+        
+        if ((DistanceChecker(correctLamp1.transform.position, .5f) && CircuitStateManager.GetComponent<CircuitStateManager>().isSpot1occupied == false)|| 
+            (DistanceChecker(correctLamp2.transform.position, .5f) && CircuitStateManager.GetComponent<CircuitStateManager>().isSpot2occupied == false)|| 
+            (DistanceChecker(correctLamp3.transform.position, .5f) && CircuitStateManager.GetComponent<CircuitStateManager>().isSpot3occupied == false)|| 
+            (DistanceChecker(correctLamp4.transform.position, .5f) && CircuitStateManager.GetComponent<CircuitStateManager>().isSpot4occupied == false)||
+            (DistanceChecker(outsideLamp.transform.position,  .5f) && CircuitStateManager.GetComponent<CircuitStateManager>().isSpotOutsideOccupied == false))
+        {
+            if (DistanceChecker(correctLamp1.transform.position, .5f))
+            {
+                this.transform.position = correctLamp1.transform.position;
+                CircuitStateManager.GetComponent<CircuitStateManager>().isSpot1occupied = true;
+                if (whichLampIsCorrect == 1 || is15LLamp) {correctPosition = true;} else{correctPosition = false;}
+                lightSource.GetComponent<Light>().intensity = lumenValue1;
+            }
+            if (DistanceChecker(correctLamp2.transform.position, .5f))
+            {
+                this.transform.position = correctLamp2.transform.position;
+                CircuitStateManager.GetComponent<CircuitStateManager>().isSpot2occupied = true;
+                if (whichLampIsCorrect == 2) {correctPosition = true;} else{correctPosition = false;}
+                lightSource.GetComponent<Light>().intensity = lumenValue2;
+            }
+            if (DistanceChecker(correctLamp3.transform.position, .5f))
+            {
+                this.transform.position = correctLamp3.transform.position;
+                CircuitStateManager.GetComponent<CircuitStateManager>().isSpot3occupied = true;
+                if (whichLampIsCorrect == 3 || is15LLamp) {correctPosition = true;} else{correctPosition = false;}
+                lightSource.GetComponent<Light>().intensity = lumenValue3;
+            }
+            if (DistanceChecker(correctLamp4.transform.position, .5f))
+            {
+                this.transform.position = correctLamp4.transform.position;
+                CircuitStateManager.GetComponent<CircuitStateManager>().isSpot4occupied = true;
+                if (whichLampIsCorrect == 4) {correctPosition = true;} else{correctPosition = false;}
+                lightSource.GetComponent<Light>().intensity = lumenValue4;
+            }
+            if (DistanceChecker(outsideLamp.transform.position, .5f))
+            {
+                this.transform.position = outsideLamp.transform.position;
+                CircuitStateManager.GetComponent<CircuitStateManager>().isSpotOutsideOccupied = true;
+                correctPosition = false;
+                lightSource.GetComponent<Light>().intensity = lumenValueStart;
+            }
+            if (this.transform.position != previousPos)
+            {
+                if (previousPos == correctLamp1.transform.position)
+                {
+                    CircuitStateManager.GetComponent<CircuitStateManager>().isSpot1occupied = false;
+                }
+                if (previousPos == correctLamp2.transform.position)
+                {
+                    CircuitStateManager.GetComponent<CircuitStateManager>().isSpot2occupied = false;
+                }
+                if (previousPos == correctLamp3.transform.position)
+                {
+                    CircuitStateManager.GetComponent<CircuitStateManager>().isSpot3occupied = false;
+                }
+                if (previousPos == correctLamp4.transform.position)
+                {
+                    CircuitStateManager.GetComponent<CircuitStateManager>().isSpot4occupied = false;
+                }
+                if (previousPos == outsideLamp.transform.position)
+                {
+                    CircuitStateManager.GetComponent<CircuitStateManager>().isSpotOutsideOccupied = false;
+                }
+            }
+            previousPos = transform.position;
+            hasBeenMovedBefore = true;
+        }
+        else
+        {
+            correctPosition = false;
+            if (!hasBeenMovedBefore)
+            {
+                // this.transform.position = resetPos;
+                gameObject.transform.DOMove(resetPos, .5f).SetEase(Ease.InOutSine);
+            }
+            else
+            {
+                //this.transform.position = previousPos;
+                gameObject.transform.DOMove(previousPos, .5f).SetEase(Ease.InOutSine);
+            }
+        }
+        isDragFinished = true;
+        CircuitStateManager.GetComponent<CircuitStateManager>().FinishedChecker();
+    }
+
+    private bool DistanceChecker(Vector3 pos, float range)
+    {
+        return Mathf.Abs(this.transform.position.x - pos.x) <= range &&
+               Mathf.Abs(this.transform.position.y - pos.y) <= range;
+    }
+}

@@ -1,0 +1,142 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+// using UnityEditor.Timeline.Actions;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class PipeStateManager : MonoBehaviour
+{
+    [SerializeField] private AudioClip[] _FinishedSound;
+    public GameObject PipesHolder;
+    public GameObject Highlightable;
+    public GameObject HighlightableOff;
+    public GameObject HighlightableStartNEnd;
+    private static GameObject[] Pipes;
+    private static GameObject[] HighlightablePipes;
+    private static GameObject[] HighlightablePipesOff;
+    private static GameObject[] HighlightablePipesStartNEnd;
+    private static int totalPipes;
+    private static int totalHighlightablePipes;
+    private static int totalHighlightablePipesOff;
+    private static int totalHighlightablePipesStartNEnd;
+    
+    void Start()
+    {
+        totalPipes = PipesHolder.transform.childCount;
+        totalHighlightablePipes = Highlightable.transform.childCount;
+        totalHighlightablePipesOff = HighlightableOff.transform.childCount;
+        totalHighlightablePipesStartNEnd = HighlightableStartNEnd.transform.childCount;
+        
+        Pipes = new GameObject[totalPipes];
+        HighlightablePipes = new GameObject[totalHighlightablePipes];
+        HighlightablePipesOff = new GameObject[totalHighlightablePipesOff];
+        HighlightablePipesStartNEnd = new GameObject[totalHighlightablePipesStartNEnd];
+        
+        for (int i = 0; i < PipesHolder.transform.childCount; i++)
+        {
+            Pipes[i] = PipesHolder.transform.GetChild(i).gameObject;
+        }
+        for (int i = 0; i < Highlightable.transform.childCount; i++)
+        {
+            HighlightablePipes[i] = Highlightable.transform.GetChild(i).gameObject;
+        }
+        for (int i = 0; i < HighlightableOff.transform.childCount; i++)
+        {
+            HighlightablePipesOff[i] = HighlightableOff.transform.GetChild(i).gameObject;
+        }
+        for (int i = 0; i < HighlightableStartNEnd.transform.childCount; i++)
+        {
+            HighlightablePipesStartNEnd[i] = HighlightableStartNEnd.transform.GetChild(i).gameObject;
+        }
+    }
+
+    public void FinishedCheckerPipes()
+    {
+        var points = 0;
+        foreach (GameObject pipe in Pipes)
+        {
+            if (pipe.GetComponent<Pipes>().isPlacedCorrectly == true)
+            {
+                points++;
+            }
+        }
+        if (points == Pipes.Length)
+        {
+            SceneFinished();
+        }
+    }
+    private void Update()
+    {
+        // Cheat
+        if (Input.GetKeyDown(KeyCode.K))
+        {
+            SceneFinished();
+        }
+        // Reset
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+        // Highlight
+        if (Input.GetKeyDown(KeyCode.M))
+        {
+            foreach (GameObject HighlightablePipe in HighlightablePipes)
+            {
+                HighlightablePipe.GetComponent<Renderer>().material.SetColor("_EmissiveColor", Color.blue);
+            }
+            foreach (GameObject HighlightablePipeOff in HighlightablePipesOff)
+            {
+                HighlightablePipeOff.GetComponent<Renderer>().material.SetColor("_EmissiveColor", Color.red);
+            }
+            foreach (GameObject HighlightablePipeStartNEnd in HighlightablePipesStartNEnd)
+            {
+                HighlightablePipeStartNEnd.GetComponent<Renderer>().material.SetColor("_EmissiveColor", Color.green);
+            }
+        }
+        if (Input.GetKeyUp(KeyCode.M))
+        {
+            foreach (GameObject HighlightablePipe in HighlightablePipes)
+            {
+                HighlightablePipe.GetComponent<Renderer>().material.SetColor("_EmissiveColor", Color.black);
+            }
+            foreach (GameObject HighlightablePipeOff in HighlightablePipesOff)
+            {
+                HighlightablePipeOff.GetComponent<Renderer>().material.SetColor("_EmissiveColor", Color.black);
+            }
+            foreach (GameObject HighlightablePipeStartNEnd in HighlightablePipesStartNEnd)
+            {
+                HighlightablePipeStartNEnd.GetComponent<Renderer>().material.SetColor("_EmissiveColor", Color.black);
+            }
+        }
+        // Exit
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            SceneManager.LoadScene(17);
+        }
+    }
+    private void SceneFinished()
+    {
+        Debug.Log("Pipes solved");
+        if (AlwaysThere.Machinventory[0].Name!=null)
+        {
+            if (!AlwaysThere.Machinventory[0].ItemRecieved)
+            {
+                AlwaysThere.PipeJustCollected = true;
+            }
+
+            Debug.Log("after first time check");
+            AlwaysThere.Machinventory[0].ItemRecieved = true;
+        }
+        Debug.Log("pipe tp machineventory");
+        AlwaysThere.PipeRiddleFinished = true;
+        AlwaysThere.PipeCollected = true;
+        InteractionManager.PlaySoundSFX(_FinishedSound, 1f);
+        Debug.Log("Scene Finished");
+        Invoke("DelayToLoad", 1f);
+    }
+    private void DelayToLoad()
+    {
+        SceneManager.LoadScene(17);
+    }
+}
