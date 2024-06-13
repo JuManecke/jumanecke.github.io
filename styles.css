@@ -47,7 +47,7 @@ h2 {
 }
 h3{
   color: black;
-  text-align: left;
+  text-align: center;
   font-size: 30px;
   margin: 0 0 0 8%;
 }
@@ -95,6 +95,8 @@ p {
   padding: 5px;
   hyphens: auto;
   text-align: justify;
+  align-self: center;
+  max-width: 70ch;
 }
 .legals {
   font-size: 25px;
